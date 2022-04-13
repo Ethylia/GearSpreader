@@ -371,17 +371,25 @@ bool Distributor::PopulateLists()
 
 float Distributor::ScanLvlList(const RE::TESLevItem* const levItem)
 { // My first art project (:
-	float weight = 0.0f;
-	for(size_t i = 0; i < levItem->numEntries; ++i)
+	auto s = _scannedLists.find(levItem);
+	if(s != _scannedLists.end())
+		return s->second; // we avoid infinite loops now who could have thought it could cause problems
+	else
 	{
-		if(levItem->entries[i].form->Is(RE::FormType::LeveledItem))
-			weight += ScanLvlList(levItem->entries[i].form->As<RE::TESLevItem>()) * (float)levItem->entries[i].count;
-		else if(levItem->entries[i].form->Is(RE::FormType::Armor) && levItem->entries[i].form->As<RE::TESObjectARMO>()->GetArmorType() != RE::BGSBipedObjectForm::ArmorType::kClothing)
-			weight += 1.0f * (float)levItem->entries[i].count; // we ignore clothing for now TODO: don't
+		float weight = 0.0f;
+		auto& list = _scannedLists[levItem];
+		list = 0.0f;
+		for(size_t i = 0; i < levItem->numEntries; ++i)
+		{
+			if(levItem->entries[i].form->Is(RE::FormType::LeveledItem))
+				weight += ScanLvlList(levItem->entries[i].form->As<RE::TESLevItem>()) * (float)levItem->entries[i].count;
+			else if(levItem->entries[i].form->Is(RE::FormType::Armor) && levItem->entries[i].form->As<RE::TESObjectARMO>()->GetArmorType() != RE::BGSBipedObjectForm::ArmorType::kClothing)
+				weight += 1.0f * (float)levItem->entries[i].count; // we ignore clothing for now TODO: don't
+		}
+		// it gets the average amount of armors that can spawn in a lvllist
+		list = (weight / (float)levItem->numEntries) * ((float)(100 - levItem->chanceNone) * 0.01f);
+		return list;
 	}
-	// it gets the average amount of armors that can spawn in a lvllist
-	weight /= (float)levItem->numEntries;
-	return weight * ((float)(100 - levItem->chanceNone) * 0.01f);
 }
 
 bool Distributor::Distribute()
@@ -415,7 +423,7 @@ bool Distributor::Distribute()
 	{
 		// TODO: we gotta separate the whites and the col- the armor categories
 		float weight = 0.0f;
-		(*containers)->As<RE::TESContainer>()->ForEachContainerObject([&weight](RE::ContainerObject& c)
+		(*containers)->As<RE::TESContainer>()->ForEachContainerObject([&weight,this](RE::ContainerObject& c)
 			{
 				if(c.obj->Is(RE::FormType::LeveledItem))
 					weight += ScanLvlList(c.obj->As<RE::TESLevItem>()) * (float)c.count;

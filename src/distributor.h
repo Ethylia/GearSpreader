@@ -34,7 +34,7 @@ private:
 	};
 
 	// shit's recursive yo
-	static float ScanLvlList(const RE::TESLevItem* const levItem);
+	float ScanLvlList(const RE::TESLevItem* const levItem);
 	//std::unordered_map<size_t, std::forward_list<const RE::TESObjectARMO*>[category::_count]>& List() { return _lists; }
 
 	std::forward_list<RE::TESObjectARMO*>& ArmorList(uint16_t modid, category c) { return _entries[modid].armors[c]; }
@@ -63,6 +63,9 @@ private:
 	// TODO: enchented items probs consider that huh
 	//const RE::TESLevItem* _lAllCategory[chance::_count]{nullptr};
 	RE::TESLevItem* _lAll[chance::_ccount]{nullptr};
+
+	// we keep track of lists already scanned (and stop recursive loops in the process)
+	std::unordered_map<const RE::TESLevItem*, float> _scannedLists;
 
 	bool LoadIni();
 	struct
