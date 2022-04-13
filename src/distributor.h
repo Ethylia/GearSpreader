@@ -2,8 +2,6 @@
 
 #include <RE/T/TESForm.h>
 
-#include <forward_list>
-
 class Distributor
 {
 public:
@@ -75,6 +73,7 @@ private:
 		int toplevel = 40; // higher=later armor
 		uint16_t maxlevel = 40;
 		uint16_t maxAdds = 5;
+		bool usingwhitelist = false;
 		bool verboselog = false;
 	} settings;
 };

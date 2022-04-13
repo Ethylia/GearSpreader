@@ -5,10 +5,7 @@
 
 #include <array>
 
-//#include "SimpleIni.h"
-
 static const char* IGNORED_FILES[] = {"Skyrim.esm", "Update.esm", "Dawnguard.esm", "HearthFires.esm", "Dragonborn.esm"};
-//static const char* IGNORE_STRING = "Skyrim.esm,Update.esm,Dawnguard.esm,HearthFires.esm,Dragonborn.esm";
 
 static const char* CATEGORY_STRINGS[] = {"Clothing", "EnchClothing", "Light", "EnchLight", "Heavy", "EnchHeavy", "All"};
 static const int8_t CHANCE_INTS[] = {10, 25, 50, 75, 100, 100};
@@ -93,6 +90,7 @@ bool Distributor::LoadIni()
 	const char* path = "Data/SKSE/Plugins/GearSpreader.ini";
 	CSimpleIniA ini;
 	ini.SetUnicode();
+	ini.SetMultiKey();
 
 	SI_Error err = ini.LoadFile(path);
 	if(err < 0) return false;
@@ -100,67 +98,67 @@ bool Distributor::LoadIni()
 	{
 		CSimpleIniA::TNamesDepend whitelist;
 		ini.GetAllValues("GearSpreader", "whitelist", whitelist);
-		whitelist.sort(CSimpleIniA::Entry::LoadOrder());
-		if(!whitelist.empty())
+		if(!whitelist.empty() && whitelist.front().pItem[0] != '\0')
 		{
-			for(auto& entry : whitelist)
+			settings.usingwhitelist = true;
+			whitelist.sort(CSimpleIniA::Entry::LoadOrder());
+			for(CSimpleIniA::TNamesDepend::const_iterator entry = whitelist.begin(); entry != whitelist.end(); ++entry)
 			{
-				//size_t len = strlen(entry.pItem) + 1;
-				const char* last = entry.pItem;
+				const char* last = entry->pItem;
 				for(size_t i = 0;; ++i)
 				{
-					if(entry.pItem[i] == ',')
+					if(entry->pItem[i] == ',')
 					{
 						//ignores[i] = '\0';
-						char* newstr = new char[&entry.pItem[i] - last + 1];
+						char* newstr = new char[&entry->pItem[i] - last + 1];
 						settings.whitelist.push_back(newstr);
-						memcpy(newstr, last, &entry.pItem[i] - last);
-						newstr[&entry.pItem[i] - last] = 0;
-						last = &entry.pItem[i + 1];
-					} else if(entry.pItem[i] == '\0')
+						memcpy(newstr, last, &entry->pItem[i] - last);
+						newstr[&entry->pItem[i] - last] = 0;
+						last = &entry->pItem[i + 1];
+					} else if(entry->pItem[i] == '\0')
 					{
-						char* newstr = new char[&entry.pItem[i] - last + 1];
+						char* newstr = new char[&entry->pItem[i] - last + 1];
 						settings.whitelist.push_back(newstr);
-						memcpy(newstr, last, &entry.pItem[i] - last + 1);
+						memcpy(newstr, last, &entry->pItem[i] - last + 1);
 						break;
 					}
 				}
 			}
 		}
 	}
-	if(settings.whitelist.empty())
+	if(!settings.usingwhitelist)
 	{
 		// add the default ones
 		for(const char* i : IGNORED_FILES)
 		{
-			size_t len = strlen(i);
-			char* newstr = new char[strlen(i)];
-			memcpy(newstr, i, len + 1);
+			size_t len = strlen(i) + 1;
+			char* newstr = new char[len];
+			memcpy(newstr, i, len);
 			settings.blacklist.push_back(newstr);
 		}
 
 		CSimpleIniA::TNamesDepend blacklist;
 		ini.GetAllValues("GearSpreader", "ignorefiles", blacklist);
 		blacklist.sort(CSimpleIniA::Entry::LoadOrder());
-		if(!blacklist.empty())
+		if(!blacklist.empty() && blacklist.front().pItem[0] != '\0')
 		{
-			for(auto& entry : blacklist)
+			for(CSimpleIniA::TNamesDepend::const_iterator entry = blacklist.begin(); entry != blacklist.end(); ++entry)
 			{
-				const char* last = entry.pItem;
+				const char* last = entry->pItem;
 				for(size_t i = 0;; ++i)
 				{
-					if(entry.pItem[i] == ',')
+					if(entry->pItem[i] == ',')
 					{
-						char* newstr = new char[&entry.pItem[i] - last + 1];
+						char* newstr = new char[&entry->pItem[i] - last + 1];
 						settings.blacklist.push_back(newstr);
-						memcpy(newstr, last, &entry.pItem[i] - last);
-						newstr[&entry.pItem[i] - last] = 0;
-						last = &entry.pItem[i + 1];
-					} else if(entry.pItem[i] == '\0')
+						memcpy(newstr, last, &entry->pItem[i] - last);
+						newstr[&entry->pItem[i] - last] = 0;
+						last = &entry->pItem[i + 1];
+					} else if(entry->pItem[i] == '\0')
 					{
-						char* newstr = new char[&entry.pItem[i] - last + 1];
+						char* newstr = new char[&entry->pItem[i] - last + 1];
+						memcpy(newstr, last, &entry->pItem[i] - last + 1);
 						settings.blacklist.push_back(newstr);
-						memcpy(newstr, last, &entry.pItem[i] - last + 1);
 						break;
 					}
 				}
@@ -168,11 +166,12 @@ bool Distributor::LoadIni()
 		}
 	}
 
-	// these default to their definition values in the header file
+	// these default to their definition values in the header file if not set in the ini
 	settings.bottomlevel = (int)ini.GetLongValue("GearSpreader", "bottomlevel", settings.bottomlevel);
 	settings.toplevel = (int)ini.GetLongValue("GearSpreader", "toplevel", settings.toplevel);
 	settings.maxAdds = (uint16_t)ini.GetLongValue("GearSpreader", "maxadds", settings.maxAdds);
 	settings.maxlevel = (uint16_t)ini.GetLongValue("GearSpreader", "maxlevel", settings.maxlevel);
+	settings.verboselog = ini.GetBoolValue("GearSpreader", "verboselog", settings.verboselog);
 
 	return true;
 }
@@ -189,7 +188,7 @@ bool Distributor::PopulateLists()
 	{
 		auto* file = form->GetFile(0);
 		bool invalid = false;
-		if(settings.whitelist.empty())
+		if(!settings.usingwhitelist)
 		{
 			for(auto str : settings.blacklist)
 			{ // check if origin file is an ignored file
@@ -201,17 +200,19 @@ bool Distributor::PopulateLists()
 			}
 		} else
 		{
+			invalid = true;
 			for(auto str : settings.whitelist)
-			{ // check if origin file is an ignored file
-				if(!strequal(str, file->GetFilename().data()) || !(file->compileIndex < 0xFF))
+			{ // check if origin file is whitelisted
+				if(strequal(str, file->GetFilename().data()) && (file->compileIndex < 0xFF))
 				{
-					invalid = true;
+					invalid = false;
 					break;
 				}
 			}
 		}
 
-		if(invalid || !form->GetPlayable())
+		// let's invalidate unnamed armors for safety
+		if(invalid || !form->GetPlayable() || !form->GetName()[0])
 			continue;
 
 		// Categorize all armors and put em in a vector for later
@@ -240,8 +241,7 @@ bool Distributor::PopulateLists()
 			SKSE::log::warn("Unknown armor type for: {}", form->GetName());
 			break;
 		}
-		// this also creates an entry for each mod the armor originates from
-		if(c != category::_count)
+		if(c != category::_count) // accessing the unordered map creates an entry if it doesn't exist
 			ArmorList((uint16_t)file->GetCompileIndex() + file->GetSmallFileCompileIndex(), c).push_front(form->As<RE::TESObjectARMO>());
 	}
 
@@ -313,7 +313,6 @@ bool Distributor::PopulateLists()
 		lAll->numEntries = count;
 		RE::LEVELED_OBJECT lAllObj = {0};
 		lAllObj.count = 1;
-		//lAllObj.level = 1;
 		uint8_t i = 0;
 		for(auto& lvlList : entry.lCategories)
 		{
@@ -388,6 +387,30 @@ float Distributor::ScanLvlList(const RE::TESLevItem* const levItem)
 bool Distributor::Distribute()
 {
 	RE::TESDataHandler* const dh = RE::TESDataHandler::GetSingleton();
+
+	if(settings.verboselog)
+	{
+		SKSE::log::info("It's chatty time");
+		for(size_t moditr = 0; moditr < _lAll[0]->entries[0].form->As<RE::TESLevItem>()->numEntries; ++moditr)
+		{
+			SKSE::log::info("------ PLUGIN {}/{} ------", moditr + 1, _entries.size());
+			const RE::TESLevItem* modlist = _lAll[0]->entries[0].form->As<RE::TESLevItem>();
+			size_t catitr = 0;
+			for(auto cat : modlist->entries[moditr].form->As<RE::TESLevItem>()->entries)
+			{
+				auto* catlist = cat.form->As<RE::TESLevItem>();
+				SKSE::log::info("\t|\tCATEGORY {} COUNT: {} CHANCENONE: {} LEVEL: {}", catitr, catlist->numEntries, catlist->chanceNone, cat.level);
+				for(auto armor : catlist->entries)
+				{
+					auto armorform = armor.form->As<RE::TESObjectARMO>();
+					SKSE::log::info("\t|\t|\tARMOR: {} ID: {:x} LEVEL: {}", armorform->GetName(), armorform->GetFormID(), armor.level);
+				}
+				++catitr;
+			}
+		}
+	} else
+		SKSE::log::info("Set verboselog to true in the ini and check back or throw me a copy if you're having problems");
+
 	for(auto containers = dh->GetFormArray(RE::FormType::Container).begin(); containers != dh->GetFormArray(RE::FormType::Container).end(); ++containers)
 	{
 		// TODO: we gotta separate the whites and the col- the armor categories
@@ -400,25 +423,27 @@ bool Distributor::Distribute()
 					weight += 1.0f * (float)c.count;
 				return true;
 			});
-		uint16_t c = std::min<uint16_t>((uint16_t)(weight + 0.99f), settings.maxAdds); // truncate
+		uint16_t c = std::min<uint16_t>((uint16_t)(weight + 0.99f), settings.maxAdds); // truncates too
 		if(c)
 		{
 			chance ch;
-			float w = weight * 0.04f;
-			if(w < 0.0075f)
+			if(weight < 0.1875f)
 				ch = chance::c10;
-			else if(w < 0.0155f)
+			else if(weight < 0.3875f)
 				ch = chance::c25;
-			else if(w < 0.0255f)
+			else if(weight < 0.6325f)
 				ch = chance::c50;
-			else if(w < 0.0355f)
+			else if(weight < 0.8875f)
 				ch = chance::c75;
 			else
 				ch = chance::c100;
 			(*containers)->As<RE::TESContainer>()->AddObjectToContainer(_lAll[ch], c, nullptr);
+			if(settings.verboselog)
+				SKSE::log::info("CONTAINER: {:x} CHANCE: {}", (*containers)->formID, weight);
 		}
 	}
-	return false;
+	
+	return true;
 }
 
 
