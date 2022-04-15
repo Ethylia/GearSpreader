@@ -10,13 +10,8 @@ static const char* IGNORED_FILES[] = {"Skyrim.esm", "Update.esm", "Dawnguard.esm
 static const char* CATEGORY_STRINGS[] = {"Clothing", "EnchClothing", "Light", "EnchLight", "Heavy", "EnchHeavy", "All"};
 static const int8_t CHANCE_INTS[] = {10, 25, 50, 75, 100, 100};
 
-template<class T>
-static size_t FListSize(std::forward_list<T>& list)
-{
-	size_t s = 0;
-	for([[maybe_unused]] auto i : list) ++s;
-	return s;
-}
+static const size_t CATEGORY_MAX = 256ull * 256ull;
+
 static bool strequal(const char* str, const char* cmpstr)
 { // boomer 'performant' equality check, probably implemented somewhere in the std but screw it
 	size_t i = 0;
@@ -26,14 +21,6 @@ static bool strequal(const char* str, const char* cmpstr)
 	if(str[i] == cmpstr[i])
 		return true;
 	return false;
-}
-
-static uint16_t GetMinLvl(const RE::TESLevItem* list)
-{
-	uint16_t lvl = 1000;
-	for(size_t i = 0; i < (size_t)list->numEntries; ++i)
-		lvl = std::min<uint16_t>(list->entries[i].level, lvl);
-	return lvl;
 }
 
 static bool SortByLvl(const RE::LEVELED_OBJECT& lhs, const RE::LEVELED_OBJECT& rhs)
@@ -52,34 +39,34 @@ uint16_t Distributor::CalculateLvl(const RE::TESObjectARMO* armor) const
 		if(std::to_underlying<RE::BIPED_MODEL::BipedObjectSlot>(armor->GetSlotMask()) & std::to_underlying<RE::BIPED_MODEL::BipedObjectSlot>(RE::BIPED_MODEL::BipedObjectSlot::kBody))
 		{ // look I dunno how to shorten that if statement ok
 			// linear interpolation between lowest vanilla level armor and highest then grouped into 5 level slices
-			return std::clamp<uint16_t>((uint16_t)(((ar - 20) * ((settings.toplevel - settings.bottomlevel) / 21) + settings.bottomlevel) / 5 * 5), 1, settings.maxlevel);
+			return (uint16_t)std::clamp<int>(((ar - 20) * ((settings.toplevel - settings.bottomlevel) / 21) + settings.bottomlevel) / 5 * 5, 1, (int)settings.maxlevel);
 		} else if(std::to_underlying<RE::BIPED_MODEL::BipedObjectSlot>(armor->GetSlotMask()) & std::to_underlying<RE::BIPED_MODEL::BipedObjectSlot>(RE::BIPED_MODEL::BipedObjectSlot::kHair))
 		{
-			return std::clamp<uint16_t>((uint16_t)(((ar - 10) * ((settings.toplevel - settings.bottomlevel) / 7) + settings.bottomlevel) / 5 * 5), 1, settings.maxlevel);
+			return (uint16_t)std::clamp<int>(((ar - 10) * ((settings.toplevel - settings.bottomlevel) / 7) + settings.bottomlevel) / 5 * 5, 1, (int)settings.maxlevel);
 		} else if(std::to_underlying<RE::BIPED_MODEL::BipedObjectSlot>(armor->GetSlotMask()) & std::to_underlying<RE::BIPED_MODEL::BipedObjectSlot>(RE::BIPED_MODEL::BipedObjectSlot::kShield))
 		{
-			return std::clamp<uint16_t>((uint16_t)(((ar - 15) * ((settings.toplevel - settings.bottomlevel) / 14) + settings.bottomlevel) / 5 * 5), 1, settings.maxlevel);
+			return (uint16_t)std::clamp<int>(((ar - 15) * ((settings.toplevel - settings.bottomlevel) / 14) + settings.bottomlevel) / 5 * 5, 1, (int)settings.maxlevel);
 		} else
 		{
-			return std::clamp<uint16_t>((uint16_t)(((ar - 5) * ((settings.toplevel - settings.bottomlevel) / 7) + settings.bottomlevel) / 5 * 5), 1, settings.maxlevel);
+			return (uint16_t)std::clamp<int>(((ar - 5) * ((settings.toplevel - settings.bottomlevel) / 7) + settings.bottomlevel) / 5 * 5, 1, (int)settings.maxlevel);
 		}
 	} else if(at == RE::BGSBipedObjectForm::ArmorType::kHeavyArmor)
 	{
 		if(std::to_underlying<RE::BIPED_MODEL::BipedObjectSlot>(armor->GetSlotMask()) & std::to_underlying<RE::BIPED_MODEL::BipedObjectSlot>(RE::BIPED_MODEL::BipedObjectSlot::kBody))
 		{
-			return std::clamp<uint16_t>((uint16_t)(((ar - 25) * ((settings.toplevel - settings.bottomlevel) / 24) + settings.bottomlevel) / 5 * 5), 1, settings.maxlevel);
+			return (uint16_t)std::clamp<int>(((ar - 25) * ((settings.toplevel - settings.bottomlevel) / 24) + settings.bottomlevel) / 5 * 5, 1, (int)settings.maxlevel);
 		} else if(std::to_underlying<RE::BIPED_MODEL::BipedObjectSlot>(armor->GetSlotMask()) & std::to_underlying<RE::BIPED_MODEL::BipedObjectSlot>(RE::BIPED_MODEL::BipedObjectSlot::kHair))
 		{
-			return std::clamp<uint16_t>((uint16_t)(((ar - 15) * ((settings.toplevel - settings.bottomlevel) / 8) + settings.bottomlevel) / 5 * 5), 1, settings.maxlevel);
+			return (uint16_t)std::clamp<int>(((ar - 15) * ((settings.toplevel - settings.bottomlevel) / 8) + settings.bottomlevel) / 5 * 5, 1, (int)settings.maxlevel);
 		} else if(std::to_underlying<RE::BIPED_MODEL::BipedObjectSlot>(armor->GetSlotMask()) & std::to_underlying<RE::BIPED_MODEL::BipedObjectSlot>(RE::BIPED_MODEL::BipedObjectSlot::kShield))
 		{
-			return std::clamp<uint16_t>((uint16_t)(((ar - 20) * ((settings.toplevel - settings.bottomlevel) / 26) + settings.bottomlevel) / 5 * 5), 1, settings.maxlevel);
+			return (uint16_t)std::clamp<int>(((ar - 20) * ((settings.toplevel - settings.bottomlevel) / 26) + settings.bottomlevel) / 5 * 5, 1, (int)settings.maxlevel);
 		} else if(std::to_underlying<RE::BIPED_MODEL::BipedObjectSlot>(armor->GetSlotMask()) & std::to_underlying<RE::BIPED_MODEL::BipedObjectSlot>(RE::BIPED_MODEL::BipedObjectSlot::kHands))
 		{
-			return std::clamp<uint16_t>((uint16_t)(((ar - 11) * ((settings.toplevel - settings.bottomlevel) / 7) + settings.bottomlevel) / 5 * 5), 1, settings.maxlevel);
+			return (uint16_t)std::clamp<int>(((ar - 11) * ((settings.toplevel - settings.bottomlevel) / 7) + settings.bottomlevel) / 5 * 5, 1, (int)settings.maxlevel);
 		} else
 		{
-			return std::clamp<uint16_t>((uint16_t)(((ar - 10) * ((settings.toplevel - settings.bottomlevel) / 8) + settings.bottomlevel) / 5 * 5), 1, settings.maxlevel);
+			return (uint16_t)std::clamp<int>(((ar - 10) * ((settings.toplevel - settings.bottomlevel) / 8) + settings.bottomlevel) / 5 * 5, 1, (int)settings.maxlevel);
 		}
 	}
 	return 1;
@@ -172,6 +159,7 @@ bool Distributor::LoadIni()
 	settings.maxAdds = (uint16_t)ini.GetLongValue("GearSpreader", "maxadds", settings.maxAdds);
 	settings.maxlevel = (uint16_t)ini.GetLongValue("GearSpreader", "maxlevel", settings.maxlevel);
 	settings.verboselog = ini.GetBoolValue("GearSpreader", "verboselog", settings.verboselog);
+	settings.debuglog = ini.GetBoolValue("GearSpreader", "debuglog", settings.debuglog);
 
 	return true;
 }
@@ -242,7 +230,7 @@ bool Distributor::PopulateLists()
 			break;
 		}
 		if(c != category::_count) // accessing the unordered map creates an entry if it doesn't exist
-			ArmorList((uint16_t)file->GetCompileIndex() + file->GetSmallFileCompileIndex(), c).push_front(form->As<RE::TESObjectARMO>());
+			ArmorList((uint16_t)file->GetCompileIndex() + file->GetSmallFileCompileIndex(), c).push_back(form->As<RE::TESObjectARMO>());
 	}
 
 	if(_entries.empty())
@@ -266,37 +254,72 @@ bool Distributor::PopulateLists()
 	{
 		for(size_t i = 0; i < category::_count; ++i)
 		{
-			size_t size = FListSize(entry.armors[i]);
 			if(entry.armors[i].empty())
 				continue; // Skip empty categories
-			if(size > 255)
+			const size_t size = entry.armors[i].size();
+
+			if(size > CATEGORY_MAX)
 			{
 				const char* modname = 0;
 				if(modid > 253) // 254 and higher is a light mod
 					modname = dh->LookupLoadedLightModByIndex((uint16_t)modid - 254)->GetFilename().data();
 				else
 					modname = dh->LookupLoadedModByIndex((uint8_t)modid)->GetFilename().data();
-				SKSE::log::warn("Too many armors for category {} in mod {} (max 255, total {})", CATEGORY_STRINGS[i], modname, size);
+				SKSE::log::warn("Too many armors for category {} in mod {} (max {}, total {})", CATEGORY_STRINGS[i], modname, CATEGORY_MAX, size);
 			}
 
-			uint8_t count = (uint8_t)std::min<size_t>(size, 255);
+			// total armor in category
+			size_t count = std::min<size_t>(size, CATEGORY_MAX);
+			// number of required sublists to fit them
+			uint8_t sublistcount = (uint8_t)std::min<size_t>(((count + (count / 256) - 1) / 257) + 1, 256); // wowie I suck at math don't look
+			// number that is split between each
+			auto subcount = [&count, &sublistcount]() { return count / sublistcount + ((count % sublistcount) ? 1 : 0); };
+
+			if(settings.debuglog)
+			{
+				const char* modname = 0;
+				if(modid > 253) // 254 and higher is a light mod
+					modname = dh->LookupLoadedLightModByIndex((uint16_t)modid - 254)->GetFilename().data();
+				else
+					modname = dh->LookupLoadedModByIndex((uint8_t)modid)->GetFilename().data();
+				SKSE::log::info("PLUGIN {} CALCULATED {} SUBLISTS FOR {} ARMORS SPLIT IN {}", modname, sublistcount, count, subcount());
+			}
 
 			auto* lCategory = fac->Create();
 			lCategory->chanceNone = 0;
 			lCategory->llFlags = (RE::TESLeveledList::Flag)(RE::TESLeveledList::Flag::kCalculateFromAllLevelsLTOrEqPCLevel | RE::TESLeveledList::Flag::kCalculateForEachItemInCount);
-			lCategory->entries.resize(count);
-			lCategory->numEntries = count;
+			lCategory->entries.resize(sublistcount);
+			lCategory->numEntries = sublistcount;
 
-			uint8_t j = 0;
-			RE::LEVELED_OBJECT lObj = {0};
+			RE::LEVELED_OBJECT lObj{0};
 			lObj.count = 1;
-			for(auto armor : entry.armors[i])
+
+			for(; sublistcount > 0; --sublistcount)
 			{
-				lObj.level = CalculateLvl(armor);
-				lObj.form = armor;
-				lCategory->entries[j++] = lObj;
-				if(j > 254) break;
+				size_t sc = (uint8_t)subcount();
+				// todo finish it today
+				auto* lSub = fac->Create();
+				lSub->chanceNone = 0;
+				lSub->llFlags = (RE::TESLeveledList::Flag)(RE::TESLeveledList::Flag::kCalculateFromAllLevelsLTOrEqPCLevel | RE::TESLeveledList::Flag::kCalculateForEachItemInCount);
+				lSub->entries.resize(sc);
+				lSub->numEntries = (uint8_t)sc;
+
+				RE::LEVELED_OBJECT subObj{0};
+				subObj.count = 1;
+				for(size_t itr = 0; itr < sc; ++itr)
+				{
+					subObj.form = entry.armors[i][count - 1];
+					subObj.level = CalculateLvl(entry.armors[i][count - 1]);
+					lSub->entries[itr] = subObj;
+					--count;
+				}
+				std::sort(lSub->entries.begin(), lSub->entries.end(), SortByLvl);
+				lObj.form = lSub;
+				lObj.level = lSub->entries.front().level; // first entry is lowest level since its sorted now
+
+				lCategory->entries[(size_t)sublistcount - 1] = lObj;
 			}
+
 			std::sort(lCategory->entries.begin(), lCategory->entries.end(), SortByLvl);
 			entry.lCategories[i] = lCategory;
 		}
@@ -320,7 +343,7 @@ bool Distributor::PopulateLists()
 				continue;
 
 			lAllObj.form = lvlList;
-			lAllObj.level = GetMinLvl(lvlList);
+			lAllObj.level = lvlList->entries.front().level;
 			lAll->entries[i++] = lAllObj;
 		}
 		std::sort(lAll->entries.begin(), lAll->entries.end(), SortByLvl);
@@ -330,7 +353,7 @@ bool Distributor::PopulateLists()
 		if(itrAllMods < 255)
 		{
 			lAllModsObj.form = lAll;
-			lAllModsObj.level = GetMinLvl(lAll);
+			lAllModsObj.level = lAll->entries.front().level;
 			lAllMods->entries[itrAllMods++] = lAllModsObj;
 		} else
 		{
@@ -396,34 +419,82 @@ bool Distributor::Distribute()
 {
 	RE::TESDataHandler* const dh = RE::TESDataHandler::GetSingleton();
 
-	if(settings.verboselog)
+	if(settings.debuglog)
 	{
-		SKSE::log::info("It's chatty time");
+		SKSE::log::info("It's debug time");
 		for(size_t moditr = 0; moditr < _lAll[0]->entries[0].form->As<RE::TESLevItem>()->numEntries; ++moditr)
 		{
-			SKSE::log::info("------ PLUGIN {}/{} ------", moditr + 1, _entries.size());
+			SKSE::log::info("--- PLUGIN {}/{} ---", moditr + 1, _entries.size());
 			const RE::TESLevItem* modlist = _lAll[0]->entries[0].form->As<RE::TESLevItem>();
 			size_t catitr = 0;
 			for(auto cat : modlist->entries[moditr].form->As<RE::TESLevItem>()->entries)
 			{
-				auto* catlist = cat.form->As<RE::TESLevItem>();
-				SKSE::log::info("\t|\tCATEGORY {} COUNT: {} CHANCENONE: {} LEVEL: {}", catitr, catlist->numEntries, catlist->chanceNone, cat.level);
-				for(auto armor : catlist->entries)
+				const auto* catlist = cat.form->As<RE::TESLevItem>();
+				SKSE::log::info("\t|\tCATEGORY {} SUBLIST COUNT: {} LEVEL: {}", catitr, catlist->numEntries, cat.level);
+				size_t subi = 0;
+				for(auto& sublist : catlist->entries)
 				{
-					auto armorform = armor.form->As<RE::TESObjectARMO>();
-					SKSE::log::info("\t|\t|\tARMOR: {} ID: {:x} LEVEL: {}", armorform->GetName(), armorform->GetFormID(), armor.level);
+					SKSE::log::info("\t|\t|\tSUBLIST {} COUNT: {} LEVEL: {}", subi, sublist.form->As<RE::TESLevItem>()->numEntries,sublist.level);
+					for(auto& armor : sublist.form->As<RE::TESLevItem>()->entries)
+					{
+						const auto armorform = armor.form->As<RE::TESObjectARMO>();
+						SKSE::log::info("\t|\t|\t|\tARMOR: {} ID: {:x} LEVEL: {}", armorform->GetName(), armorform->GetFormID(), armor.level);
+					}
+					++subi;
 				}
 				++catitr;
 			}
 		}
+	} else if(settings.verboselog)
+	{
+		SKSE::log::info("It's chatty time");
+		size_t moditr = 1;
+		for(auto& [id, entry] : _entries)
+		{
+			const char* modname = 0;
+			if(id > 253) // 254 and higher is a light mod
+			{
+				modname = dh->LookupLoadedLightModByIndex((uint16_t)id - 254)->GetFilename().data();
+				SKSE::log::info("\tLIGHT PLUGIN {}:{:x} {}/{}", modname, id-254, moditr, _entries.size());
+			}
+			else
+			{
+				modname = dh->LookupLoadedModByIndex((uint8_t)id)->GetFilename().data();
+				SKSE::log::info("\tPLUGIN {}:{:x} {}/{} ------", modname, id, moditr, _entries.size());
+			}
+			size_t catitr = 0;
+			for(auto& cat : entry.lCategories)
+			{
+				if(!cat)
+				{
+					SKSE::log::info("\t|\tUNUSED CATEGORY: {}", CATEGORY_STRINGS[&cat - entry.lCategories]);
+					continue;
+				}
+				size_t count = 0;
+				for(size_t i = 0; i < cat->As<RE::TESLevItem>()->numEntries; ++i)
+					count += cat->As<RE::TESLevItem>()->entries[i].form->As<RE::TESLevItem>()->numEntries;
+
+				SKSE::log::info("\t|\tCATEGORY: {} COUNT: {} MINLVL: {}", CATEGORY_STRINGS[&cat - entry.lCategories], count, cat->entries.front().level);
+				for(auto& sublist : cat->As<RE::TESLevItem>()->entries)
+				{
+					for(auto& armor : sublist.form->As<RE::TESLevItem>()->entries)
+					{
+						const auto armorform = armor.form->As<RE::TESObjectARMO>();
+						SKSE::log::info("\t|\t|\tARMOR: {} ID: {:x} LEVEL: {}", armorform->GetName(), armorform->GetFormID(), armor.level);
+					}
+				}
+				++catitr;
+			}
+			++moditr;
+		}
 	} else
-		SKSE::log::info("Set verboselog to true in the ini and check back or throw me a copy if you're having problems");
+		SKSE::log::info("Set verboselog to true in the ini for a list of parsed armors");
 
 	for(auto containers = dh->GetFormArray(RE::FormType::Container).begin(); containers != dh->GetFormArray(RE::FormType::Container).end(); ++containers)
 	{
 		// TODO: we gotta separate the whites and the col- the armor categories
 		float weight = 0.0f;
-		(*containers)->As<RE::TESContainer>()->ForEachContainerObject([&weight,this](RE::ContainerObject& c)
+		(*containers)->As<RE::TESContainer>()->ForEachContainerObject([&weight, this](RE::ContainerObject& c)
 			{
 				if(c.obj->Is(RE::FormType::LeveledItem))
 					weight += ScanLvlList(c.obj->As<RE::TESLevItem>()) * (float)c.count;
@@ -446,11 +517,11 @@ bool Distributor::Distribute()
 			else
 				ch = chance::c100;
 			(*containers)->As<RE::TESContainer>()->AddObjectToContainer(_lAll[ch], c, nullptr);
-			if(settings.verboselog)
+			if(settings.debuglog)
 				SKSE::log::info("CONTAINER: {:x} CHANCE: {}", (*containers)->formID, weight);
 		}
 	}
-	
+
 	return true;
 }
 

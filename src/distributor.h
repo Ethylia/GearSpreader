@@ -28,8 +28,8 @@ private:
 	};
 	struct ModEntry
 	{
-		std::forward_list<RE::TESObjectARMO*> armors[category::_count];
-		RE::TESLevItem* lCategories[category::_count]{nullptr};
+		std::vector<RE::TESObjectARMO*> armors[category::_count];
+		RE::TESLevItem* lCategories[category::_count]{{nullptr}};
 		RE::TESLevItem* lAll = nullptr;
 	};
 
@@ -37,7 +37,7 @@ private:
 	float ScanLvlList(const RE::TESLevItem* const levItem);
 	//std::unordered_map<size_t, std::forward_list<const RE::TESObjectARMO*>[category::_count]>& List() { return _lists; }
 
-	std::forward_list<RE::TESObjectARMO*>& ArmorList(uint16_t modid, category c) { return _entries[modid].armors[c]; }
+	std::vector<RE::TESObjectARMO*>& ArmorList(uint16_t modid, category c) { return _entries[modid].armors[c]; }
 	uint16_t CalculateLvl(const RE::TESObjectARMO* armor) const;
 	//const RE::TESLevItem*& LvlList(uint16_t modid, category c) { return _entries[modid].lvllists[c]; }
 	//const RE::TESLevItem*& AllLvlList(uint16_t modid) { return _entries[modid].lvlall; }
@@ -74,9 +74,10 @@ private:
 		std::vector<char*> whitelist;
 		int bottomlevel = 0; // higher=earlier armor
 		int toplevel = 40; // higher=later armor
-		uint16_t maxlevel = 40;
+		uint16_t maxlevel = 50;
 		uint16_t maxAdds = 5;
 		bool usingwhitelist = false;
 		bool verboselog = false;
+		bool debuglog = false;
 	} settings;
 };
