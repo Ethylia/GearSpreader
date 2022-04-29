@@ -108,5 +108,3 @@
 #include <spdlog/sinks/msvc_sink.h>
 
 #define SAMPLE_EXPORT __declspec(dllexport)
-
-#include "SimpleIni.h"

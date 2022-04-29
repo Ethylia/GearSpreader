@@ -21,7 +21,7 @@ EXTERN_C [[maybe_unused]] SAMPLE_EXPORT constinit auto SKSEPlugin_Version = []()
 {
 	SKSE::PluginVersionData v;
 	v.PluginName("GearSpreader");
-	v.PluginVersion({0, 2, 0, 0});
+	v.PluginVersion({0, 4, 0, 0});
 	v.UsesAddressLibrary(true);
 	return v;
 }();
@@ -101,8 +101,10 @@ namespace
 					// All ESM/ESL/ESP plugins have loaded, main menu is now active.
 					// It is now safe to access form data.
 					Distributor distributor;
-					if(distributor.PopulateLists())
-						distributor.Distribute();
+					if(distributor.PopulateArmorLists())
+						distributor.DistributeArmors();
+					if(distributor.PopulateWeaponLists())
+						distributor.DistributeWeapons();
 				}
 			}))
 		{

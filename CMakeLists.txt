@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.21)
 ########################################################################################################################
 project(
         GearSpreader
-        VERSION 0.2.0
+        VERSION 0.4.0
         DESCRIPTION "Gear Spreader."
         LANGUAGES CXX)
 set(PROJECT_FRIENDLY_NAME "GearSpreader")
@@ -20,12 +20,13 @@ configure_file(
 
 set(headers
         src/distributor.h
-)
+        src/settings.h)
 
 set(sources
         src/Config.cpp
         src/distributor.cpp
-        src/Main.cpp)
+        src/Main.cpp
+        src/settings.cpp)
 
 source_group(
         TREE ${CMAKE_CURRENT_SOURCE_DIR}
