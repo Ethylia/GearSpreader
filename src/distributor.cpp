@@ -7,7 +7,7 @@ static const char* const ACATEGORY_STRINGS[] = {"Clothing", "EnchClothing", "Lig
 static const char* const WCATEGORY_STRINGS[] = {"OneHand", "EnchOneHand", "TwoHand", "EnchTwoHand", "Range", "EnchRange", "Other", "EnchOther", "All"};
 
 static const int8_t CHANCE_INTS[] = {10, 25, 50, 75, 100, 100};
-static const size_t CATEGORY_MAX = 256ull * 256ull;
+static const size_t CATEGORY_MAX = 255ull * 255ull;
 
 static bool SortByLvl(const RE::LEVELED_OBJECT& lhs, const RE::LEVELED_OBJECT& rhs)
 {
@@ -219,7 +219,7 @@ bool Distributor::PopulateArmorLists()
 			// total armor in category
 			size_t count = std::min<size_t>(size, CATEGORY_MAX);
 			// number of required sublists to fit them
-			uint8_t sublistcount = (uint8_t)std::min<size_t>(((count + (count / 256) - 1) / 257) + 1, 256); // wowie I suck at math don't look
+			uint8_t sublistcount = (uint8_t)std::min<size_t>(((count + (count / 255) - 1) / 256) + 1, 255); // wowie I suck at math don't look
 			// number that is split between each
 			auto subcount = [&count, &sublistcount]() { return count / sublistcount + ((count % sublistcount) ? 1 : 0); };
 
@@ -401,7 +401,7 @@ bool Distributor::PopulateWeaponLists()
 			// total weapons in category
 			size_t count = std::min<size_t>(size, CATEGORY_MAX);
 			// number of required sublists to fit them
-			uint8_t sublistcount = (uint8_t)std::min<size_t>(((count + (count / 256) - 1) / 257) + 1, 256); // wowie I suck at math don't look
+			uint8_t sublistcount = (uint8_t)std::min<size_t>(((count + (count / 255) - 1) / 256) + 1, 255); // wowie I suck at math don't look
 			// number that is split between each
 			auto subcount = [&count, &sublistcount]() { return count / sublistcount + ((count % sublistcount) ? 1 : 0); }; // why is this a lambda who knows
 
@@ -681,7 +681,7 @@ bool Distributor::DistributeWeapons()
 				++catitr;
 			}
 		}
-	} else if(asettings.verboselog)
+	} else if(wsettings.verboselog)
 	{
 		size_t moditr = 1;
 		for(auto& [file, entry] : _wentries)
