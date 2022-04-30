@@ -54,6 +54,7 @@ private:
 	// shit's recursive yo
 	float ScanArmorChance(const RE::TESLevItem* const levItem);
 	float ScanWeaponChance(const RE::TESLevItem* const levItem);
+	float ScanClothesChance(const RE::TESLevItem* const levItem);
 	//std::unordered_map<size_t, std::forward_list<const RE::TESObjectARMO*>[category::_count]>& List() { return _lists; }
 
 	std::vector<RE::TESObjectARMO*>& ArmorList(const RE::TESFile* f, acategory c) { return _aentries[f].armors[c]; }
@@ -82,6 +83,7 @@ private:
 	// we keep a cache of lists already scanned (and stop recursive loops in the process)
 	std::unordered_map<const RE::TESLevItem*, float> _alistcache;
 	std::unordered_map<const RE::TESLevItem*, float> _wlistcache;
+	std::unordered_map<const RE::TESLevItem*, float> _clistcache;
 
 	Settings asettings;
 	Settings wsettings;

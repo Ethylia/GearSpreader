@@ -20,8 +20,10 @@ struct Settings
 	uint16_t maxlevel = 50;
 	uint16_t maxadds = 5;
 	uint8_t method = 0;
-	int32_t botgold = 0;
+	int32_t botgold = Gold;
 	int32_t topgold = 2500;
+	int32_t maxcloset = 0;
+	uint16_t maxclosetadds = 1;
 	bool verboselog = false;
 	bool debuglog = false;
 	bool enable = true;

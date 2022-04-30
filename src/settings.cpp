@@ -121,6 +121,8 @@ bool SettingsLoader::LoadSection(Settings& settings, const char* const section)
 	settings.maxlevel = (uint16_t)ini.GetLongValue(section, "maxlevel", settings.maxlevel);
 	settings.botgold = (int32_t)ini.GetLongValue(section, "bottomgold", settings.botgold);
 	settings.topgold = (int32_t)ini.GetLongValue(section, "topgold", settings.topgold);
+	settings.maxcloset = (int32_t)ini.GetLongValue(section, "maxclosetvalue", settings.maxcloset);
+	settings.maxclosetadds = (uint16_t)ini.GetLongValue(section, "maxclosetadds", settings.maxclosetadds);
 	settings.verboselog = ini.GetBoolValue(section, "verboselog", settings.verboselog);
 	settings.debuglog = ini.GetBoolValue(section, "debuglog", settings.debuglog);
 	settings.enable = ini.GetBoolValue(section, "enable", settings.enable);

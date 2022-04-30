@@ -238,7 +238,6 @@ bool Distributor::PopulateArmorLists()
 			for(; sublistcount > 0; --sublistcount)
 			{
 				size_t sc = (uint8_t)subcount();
-				// todo finish it today
 				auto* lSub = fac->Create();
 				lSub->chanceNone = 0;
 				lSub->llFlags = (RE::TESLeveledList::Flag)(RE::TESLeveledList::Flag::kCalculateFromAllLevelsLTOrEqPCLevel | RE::TESLeveledList::Flag::kCalculateForEachItemInCount);
@@ -264,6 +263,7 @@ bool Distributor::PopulateArmorLists()
 			std::sort(lCategory->entries.begin(), lCategory->entries.end(), SortByLvl);
 			entry.lCategories[i] = lCategory;
 		}
+
 		// lvllist with all categories
 		auto* lAll = fac->Create();
 
@@ -318,6 +318,10 @@ bool Distributor::PopulateArmorLists()
 
 		lChanceObj.form = lAllMods;
 		lChance->entries[0] = lChanceObj;
+
+		_alistcache[lChance] = 1.0f * (1.0f - ((float)(lChance->chanceNone) * 0.01f));
+		_wlistcache[lChance] = 0.0f;
+		_clistcache[lChance] = 0.0f;
 
 		fullList = lChance;
 		++itr;
@@ -500,6 +504,10 @@ bool Distributor::PopulateWeaponLists()
 		lChanceObj.form = lAllMods;
 		lChance->entries[0] = lChanceObj;
 
+		_alistcache[lChance] = 0.0f;
+		_wlistcache[lChance] = 1.0f * (1.0f - ((float)(lChance->chanceNone) * 0.01f));
+		_clistcache[lChance] = 0.0f;
+
 		fullList = lChance;
 		++itr;
 	}
@@ -526,7 +534,7 @@ float Distributor::ScanArmorChance(const RE::TESLevItem* const levItem)
 				weight += 1.0f * (float)levItem->entries[i].count; // we ignore clothing for now TODO: don't
 		}
 		// it gets the average amount of armors that can spawn in a lvllist
-		list = (weight / (float)levItem->numEntries) * ((float)(100 - levItem->chanceNone) * 0.01f);
+		list = (weight / (float)levItem->numEntries) * ((100.0f - (float)levItem->chanceNone) * 0.01f);
 		return list;
 	}
 }
@@ -550,7 +558,32 @@ float Distributor::ScanWeaponChance(const RE::TESLevItem* const levItem)
 				weight += 1.0f * (float)levItem->entries[i].count;
 		}
 		// it gets the average amount of armors that can spawn in a lvllist
-		list = (weight / (float)levItem->numEntries) * ((float)(100 - levItem->chanceNone) * 0.01f);
+		list = (weight / (float)levItem->numEntries) * ((100.0f - (float)levItem->chanceNone) * 0.01f);
+		return list;
+	}
+}
+float Distributor::ScanClothesChance(const RE::TESLevItem* const levItem)
+{ // My third art project o:
+	auto s = _clistcache.find(levItem);
+	if(s != _clistcache.end())
+		return s->second;
+	else
+	{
+		if(levItem->numEntries == 0)
+			return 0.0f;
+		float weight = 0.0f;
+		auto& list = _clistcache[levItem];
+		list = 0.0f;
+		for(size_t i = 0; i < levItem->numEntries; ++i)
+		{
+			if(levItem->entries[i].form->Is(RE::FormType::LeveledItem))
+				weight += ScanClothesChance(levItem->entries[i].form->As<RE::TESLevItem>()) * (float)levItem->entries[i].count;
+			else if(levItem->entries[i].form->Is(RE::FormType::Armor)
+				&& levItem->entries[i].form->As<RE::TESObjectARMO>()->GetArmorType() == RE::BGSBipedObjectForm::ArmorType::kClothing
+				&& levItem->entries[i].form->GetGoldValue() <= asettings.maxcloset)
+				weight += 1.0f * (float)levItem->entries[i].count;
+		}
+		list = (weight / (float)levItem->numEntries) * ((100.0f - (float)levItem->chanceNone) * 0.01f);
 		return list;
 	}
 }
@@ -618,10 +651,108 @@ bool Distributor::DistributeArmors()
 		}
 	}
 
+	RE::TESLevItem* closetclotheslists[_ccount]{0};
+	if(asettings.maxcloset > 0)
+	{
+		auto fac = RE::IFormFactory::GetConcreteFormFactoryByType<RE::TESLevItem>();
+		if(!fac) return false;
+
+		std::vector<const RE::LEVELED_OBJECT*> closetclothes;
+		for(auto& [mod, entry] : _aentries)
+		{
+			if(entry.lCategories[clothing])
+			{
+				for(auto& sublist : entry.lCategories[clothing]->entries)
+				{
+					for(auto& obj : sublist.form->As<RE::TESLevItem>()->entries)
+					{
+						if(obj.form->GetGoldValue() <= asettings.maxcloset)
+							closetclothes.push_back(&obj);
+						else // the list is sorted by gold value so we can stop iterating after it evaluates false
+							break;
+					}
+				}
+			}
+		}
+		if(!closetclothes.empty())
+		{
+			const size_t size = closetclothes.size();
+
+			// total armor in category
+			size_t count = std::min<size_t>(size, CATEGORY_MAX);
+			// number of required sublists to fit them
+			uint8_t sublistcount = (uint8_t)std::min<size_t>(((count + (count / 255) - 1) / 256) + 1, 255); // wowie I suck at math don't look
+			// number that is split between each
+			auto subcount = [&count, &sublistcount]() { return count / sublistcount + ((count % sublistcount) ? 1 : 0); };
+
+			if(asettings.debuglog)
+				SKSE::log::info("CALCULATED {} SUBLISTS FOR {} ARMORS SPLIT IN {} FOR CLOSET CLOTHES", sublistcount, count, subcount());
+
+			RE::TESLevItem* closetclotheslist = fac->Create();
+			closetclotheslist->chanceNone = 0;
+			closetclotheslist->llFlags = (RE::TESLeveledList::Flag)(RE::TESLeveledList::Flag::kCalculateFromAllLevelsLTOrEqPCLevel | RE::TESLeveledList::Flag::kCalculateForEachItemInCount);
+			closetclotheslist->entries.resize(sublistcount);
+			closetclotheslist->numEntries = sublistcount;
+
+			RE::LEVELED_OBJECT lObj{0};
+			lObj.count = 1;
+
+			for(; sublistcount > 0; --sublistcount)
+			{
+				uint8_t sc = (uint8_t)subcount();
+				auto* lSub = fac->Create();
+				lSub->chanceNone = 0;
+				lSub->llFlags = (RE::TESLeveledList::Flag)(RE::TESLeveledList::Flag::kCalculateFromAllLevelsLTOrEqPCLevel | RE::TESLeveledList::Flag::kCalculateForEachItemInCount);
+				lSub->entries.resize(sc);
+				lSub->numEntries = sc;
+				for(size_t itr = 0; itr < sc; ++itr)
+				{
+					lSub->entries[itr] = *(closetclothes[count - 1]);
+					--count;
+				}
+				std::sort(lSub->entries.begin(), lSub->entries.end(), SortByLvl);
+				lObj.form = lSub;
+				lObj.level = lSub->entries[0].level;
+				closetclotheslist->entries[(size_t)sublistcount - 1] = lObj;
+			}
+			std::sort(closetclotheslist->entries.begin(), closetclotheslist->entries.end(), SortByLvl);
+			size_t i = 0; 
+			for(RE::TESLevItem*& l : closetclotheslists)
+			{
+				l = fac->Create();
+				l->chanceNone = 100 - CHANCE_INTS[i];
+				l->llFlags = (RE::TESLeveledList::Flag)(RE::TESLeveledList::Flag::kCalculateFromAllLevelsLTOrEqPCLevel | RE::TESLeveledList::Flag::kCalculateForEachItemInCount);
+				l->entries.resize(1);
+				l->numEntries = 1;
+				l->entries[0] = RE::LEVELED_OBJECT{.form = closetclotheslist, .count = 1, .level = closetclotheslist->entries[0].level};
+				_alistcache[l] = 0.0f;
+				_wlistcache[l] = 0.0f;
+				_clistcache[l] = 1.0f * (1.0f - ((float)(l->chanceNone) * 0.01f));
+				++i;
+			}
+			if(asettings.debuglog)
+			{
+				SKSE::log::info("--- CLOSET LIST --- SUBLIST COUNT: {} LEVEL: {}", closetclotheslist->numEntries, closetclotheslists[0]->entries[0].level);
+				size_t subi = 0;
+				for(auto& sublist : closetclotheslist->entries)
+				{
+					SKSE::log::info("\t|\t|\tSUBLIST {} COUNT: {} LEVEL: {}", subi, sublist.form->As<RE::TESLevItem>()->numEntries, sublist.level);
+					for(auto& armor : sublist.form->As<RE::TESLevItem>()->entries)
+					{
+						const auto armorform = armor.form->As<RE::TESObjectARMO>();
+						SKSE::log::info("\t|\t|\t|\tCLOTHING: {} ID: {:x} LEVEL: {}", armorform->GetName(), armorform->GetFormID(), armor.level);
+					}
+					++subi;
+				}
+			}
+		}
+	}
+
 	for(auto containers = dh->GetFormArray(RE::FormType::Container).begin(); containers != dh->GetFormArray(RE::FormType::Container).end(); ++containers)
 	{
 		// TODO: we gotta separate the whites and the col- the armor categories
 		float weight = 0.0f;
+		bool closet = false;
 		(*containers)->As<RE::TESContainer>()->ForEachContainerObject([&weight, this](RE::ContainerObject& c)
 			{
 				if(c.obj->Is(RE::FormType::LeveledItem))
@@ -630,7 +761,20 @@ bool Distributor::DistributeArmors()
 					weight += 1.0f * (float)c.count;
 				return true;
 			});
-		uint16_t c = std::min<uint16_t>((uint16_t)(weight + 0.99f), asettings.maxadds); // truncates too
+		uint16_t c = std::min<uint16_t>((uint16_t)(weight + 0.98f), asettings.maxadds); // truncates too
+		if(!c && closetclotheslists[0])
+		{
+			(*containers)->As<RE::TESContainer>()->ForEachContainerObject([&weight, this](RE::ContainerObject& c)
+				{
+					if(c.obj->Is(RE::FormType::LeveledItem))
+						weight += ScanClothesChance(c.obj->As<RE::TESLevItem>()) * (float)c.count;
+					else if(c.obj->Is(RE::FormType::Armor))
+						weight += 1.0f * (float)c.count;
+					return true;
+				});
+			c = std::min<uint16_t>((uint16_t)(weight + 0.98f), asettings.maxclosetadds);
+			closet = true;
+		}
 		if(c)
 		{
 			chance ch;
@@ -644,9 +788,9 @@ bool Distributor::DistributeArmors()
 				ch = chance::c75;
 			else
 				ch = chance::c100;
-			(*containers)->As<RE::TESContainer>()->AddObjectToContainer(_alAll[ch], c, nullptr);
+			(*containers)->As<RE::TESContainer>()->AddObjectToContainer((closet) ? closetclotheslists[ch] : _alAll[ch], c, nullptr);
 			if(asettings.debuglog)
-				SKSE::log::info("(ARMOR) CONTAINER: {:x} CHANCE: {}", (*containers)->formID, weight);
+				SKSE::log::info("({}) CONTAINER: {:x} CHANCE: {}", (closet) ? "CLOTHING" : "ARMOR", (*containers)->formID, weight);
 		}
 	}
 
