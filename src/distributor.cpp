@@ -759,7 +759,7 @@ bool Distributor::DistributeArmors()
 					weight += ScanArmorChance(c.obj->As<RE::TESLevItem>()) * (float)c.count;
 				else if(c.obj->Is(RE::FormType::Armor))
 					weight += 1.0f * (float)c.count;
-				return true;
+				return (RE::BSContainer::ForEachResult)true;
 			});
 		uint16_t c = std::min<uint16_t>((uint16_t)(weight + 0.98f), asettings.maxadds); // truncates too
 		if(!c && closetclotheslists[0])
@@ -770,7 +770,7 @@ bool Distributor::DistributeArmors()
 						weight += ScanClothesChance(c.obj->As<RE::TESLevItem>()) * (float)c.count;
 					else if(c.obj->Is(RE::FormType::Armor))
 						weight += 1.0f * (float)c.count;
-					return true;
+					return (RE::BSContainer::ForEachResult)true;
 				});
 			c = std::min<uint16_t>((uint16_t)(weight + 0.98f), asettings.maxclosetadds);
 			closet = true;
@@ -868,7 +868,7 @@ bool Distributor::DistributeWeapons()
 					weight += ScanWeaponChance(c.obj->As<RE::TESLevItem>()) * (float)c.count;
 				else if(c.obj->Is(RE::FormType::Weapon))
 					weight += 1.0f * (float)c.count;
-				return true;
+				return (RE::BSContainer::ForEachResult)true;
 			});
 		uint16_t c = std::min<uint16_t>((uint16_t)(weight + 0.99f), wsettings.maxadds); // truncates too
 		if(c)
